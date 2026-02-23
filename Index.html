@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Countdown to 26 Sep 2026 — 11:00 (London)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #0b1020; color: #e8eefc;
+    }
+    .card {
+      width: min(720px, 92vw);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 22px 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+    }
+    h1 { margin: 0 0 6px; font-size: 20px; font-weight: 700; letter-spacing: 0.2px; }
+    .sub { margin: 0 0 18px; opacity: 0.85; line-height: 1.4; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px;
+    }
+    .tile {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .num { font-size: clamp(22px, 4.2vw, 40px); font-weight: 800; }
+    .lbl { margin-top: 4px; font-size: 12px; opacity: 0.8; letter-spacing: 0.8px; text-transform: uppercase; }
+    .meta {
+      margin-top: 14px; font-size: 13px; opacity: 0.85;
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    }
+    .pill {
+      display: inline-flex; gap: 8px; align-items: center;
+      padding: 8px 10px; border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Countdown</h1>
+    <p class="sub">
+      Time remaining until <strong>26 September 2026, 11:00</strong> (<strong>Europe/London</strong>)
+    </p>
+
+    <div class="grid" aria-live="polite">
+      <div class="tile">
+        <div class="num" id="weeks">—</div>
+        <div class="lbl">Weeks</div>
+      </div>
+      <div class="tile">
+        <div class="num" id="days">—</div>
+        <div class="lbl">Days</div>
+      </div>
+      <div class="tile">
+        <div class="num" id="hours">—</div>
+        <div class="lbl">Hours</div>
+      </div>
+      <div class="tile">
+        <div class="num" id="minutes">—</div>
+        <div class="lbl">Minutes</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <span class="pill">Target (London): <code>2026-09-26 11:00</code></span>
+      <span class="pill">Last update: <span id="updated">—</span></span>
+    </div>
+  </div>
+
+  <script>
+    // Converts a "wall clock" time in a named IANA time zone (e.g., Europe/London)
+    // into an absolute Date (UTC instant) using only built-in Intl APIs.
+    function getTimeZoneOffsetMs(date, timeZone) {
+      // Format the provided *instant* into the target time zone, then interpret those parts as UTC.
+      const dtf = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour12: false,
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      });
+
+      const parts = dtf.formatToParts(date).reduce((acc, p) => {
+        acc[p.type] = p.value;
+        return acc;
+      }, {});
+
+      const asUTC = Date.UTC(
+        Number(parts.year),
+        Number(parts.month) - 1,
+        Number(parts.day),
+        Number(parts.hour),
+        Number(parts.minute),
+        Number(parts.second)
+      );
+
+      // Positive if the time zone is ahead of UTC.
+      return asUTC - date.getTime();
+    }
+
+    function zonedTimeToUtcDate({year, month, day, hour, minute, second = 0}, timeZone) {
+      // Start by pretending the wall time is UTC...
+      const utcPretend = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+      // ...then correct by the actual offset in the target time zone at that instant.
+      const offset = getTimeZoneOffsetMs(utcPretend, timeZone);
+      return new Date(utcPretend.getTime() - offset);
+    }
+
+    const TZ = "Europe/London";
+    const target = zonedTimeToUtcDate(
+      { year: 2026, month: 9, day: 26, hour: 11, minute: 0, second: 0 },
+      TZ
+    );
+
+    const elWeeks = document.getElementById("weeks");
+    const elDays = document.getElementById("days");
+    const elHours = document.getElementById("hours");
+    const elMinutes = document.getElementById("minutes");
+    const elUpdated = document.getElementById("updated");
+
+    function pad2(n) { return String(n).padStart(2, "0"); }
+
+    function tick() {
+      const now = new Date();
+      let diffMs = target.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        elWeeks.textContent = "0";
+        elDays.textContent = "0";
+        elHours.textContent = "0";
+        elMinutes.textContent = "0";
+        elUpdated.textContent = "Reached 🎉";
+        return;
+      }
+
+      const totalMinutes = Math.floor(diffMs / 60000);
+
+      const minutesPerHour = 60;
+      const minutesPerDay = 60 * 24;
+      const minutesPerWeek = minutesPerDay * 7;
+
+      const weeks = Math.floor(totalMinutes / minutesPerWeek);
+      let remainder = totalMinutes % minutesPerWeek;
+
+      const days = Math.floor(remainder / minutesPerDay);
+      remainder = remainder % minutesPerDay;
+
+      const hours = Math.floor(remainder / minutesPerHour);
+      const minutes = remainder % minutesPerHour;
+
+      elWeeks.textContent = String(weeks);
+      elDays.textContent = String(days);
+      elHours.textContent = String(hours);
+      elMinutes.textContent = String(minutes);
+
+      elUpdated.textContent =
+        `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+    }
+
+    tick();
+    // Update every second; the values are week/day/hour/minute, but this keeps it feeling "live".
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
